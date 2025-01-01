@@ -2,6 +2,7 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import { WelcomePanel } from './webview/welcome';
+import { StatsPanel } from './webview/stats';
 import { ActivityTracker } from './tracking/ActivityTracker';
 
 // This method is called when your extension is activated
@@ -40,12 +41,14 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.window.showInformationMessage('GitLiveLog: Activity tracking paused');
 		}),
 		vscode.commands.registerCommand('gitlivelog.showStats', async () => {
-			const now = Date.now();
-			const dayStart = now - (24 * 60 * 60 * 1000); // Last 24 hours
-			const summary = await tracker.getActivitySummary(dayStart, now);
-			
-			// TODO: Show stats in a webview
-			console.log('Activity Summary:', summary);
+			try {
+				const now = Date.now();
+				const dayStart = now - (24 * 60 * 60 * 1000); // Last 24 hours
+				const summary = await tracker.getActivitySummary(dayStart, now);
+				StatsPanel.show(context.extensionUri, summary);
+			} catch (error: any) {
+				vscode.window.showErrorMessage(`Failed to load activity stats: ${error.message}`);
+			}
 		})
 	];
 
