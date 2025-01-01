@@ -1,44 +1,54 @@
-# GitLiveLog
+# GitLiveLog - Real-Time Coding Activity Tracker
 
-Tired of your GitHub activity graph making you look like you've been on a year-long sabbatical? Let GitLiveLog save you from commit embarrassment! 
-
-This VS Code extension logs every actual keystroke of effort, not just squash merges or main-branch shenanigans. Every 30 minutes, it commits a bite-sized summary of your work to a private repo, so even your most thought-out PR plans don't vanish into the void of "one contribution."
-
-With GitLiveLog, your heatmap can finally match your hard work—whether you're a code monkey cranking out features or a software sage meticulously crafting brilliance. Bonus: perfect receipts for reviews, promotions, or just flexing to your indie hacker buddies.
+GitLiveLog is a VS Code extension that provides accurate, privacy-focused tracking of your coding activity. Instead of relying on GitHub's public activity metrics, GitLiveLog tracks your actual coding effort locally, giving you meaningful insights into your development patterns.
 
 ## Features
 
-- Automatically tracks your coding activity in real-time
-- Creates commits every 30 minutes with detailed summaries
-- Maintains accurate GitHub contribution graphs
-- Commits to a private repository for your eyes only
-- Perfect for tracking your development progress
+- **Automated Activity Tracking**: Tracks your coding activity in real-time
+- **Privacy First**: All data stays local by default
+- **Detailed Analytics**: View breakdowns by file type, time spent, and more
+- **Function-Level Tracking**: Track changes at the function level
+- **Optional AI Summaries**: Get AI-powered summaries of your work (optional)
 
-## Requirements
+## Quick Start Guide
 
-- Git installed and configured on your system
-- A GitHub account
-- VS Code version 1.85.0 or higher
+1. **Installation**
+   - Install the extension from VS Code Marketplace
+   - The welcome screen will appear automatically on first launch
+   
+2. **Initial Setup**
+   - Choose where to store your activity logs
+   - Configure privacy settings
+   - Set your preferred tracking interval
+   
+3. **Using GitLiveLog**
+   - Activity tracking starts automatically after setup
+   - View your activity through the GitLiveLog panel
+   - Access settings anytime through VS Code settings
+   
+4. **Customization**
+   You can customize GitLiveLog through VS Code settings:
+   - `gitlivelog.logLocation`: Where activity logs are stored
+   - `gitlivelog.trackFileTypes`: Enable/disable file type tracking
+   - `gitlivelog.trackFunctions`: Enable/disable function-level tracking
+   - `gitlivelog.aiSummaries`: Enable/disable AI-powered summaries
+   - `gitlivelog.interval`: Set activity logging interval
 
-## Extension Settings
+## Privacy
 
-This extension contributes the following settings:
+GitLiveLog is designed with privacy in mind:
+- All data stays on your machine
+- No telemetry collection
+- Open source for transparency
+- Configurable tracking granularity
 
-* `gitlivelog.enabled`: Enable/disable GitLiveLog
-* `gitlivelog.commitInterval`: Set the interval between commits (in minutes)
-* `gitlivelog.privateRepoUrl`: URL of your private repository for activity logging
+## Support
 
-## Known Issues
+Found a bug or have a feature request? Please open an issue on our [GitHub repository](https://github.com/yourusername/gitlivelog).
 
-None yet! Please report any issues you find.
+## License
 
-## Release Notes
-
-### 0.0.1
-
-Initial release of GitLiveLog
-
----
+This extension is licensed under the MIT License. See the LICENSE file for details.
 
 ## Following extension guidelines
 

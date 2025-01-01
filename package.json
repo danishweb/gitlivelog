@@ -7,17 +7,79 @@
     "vscode": "^1.96.0"
   },
   "categories": [
+    "SCM",
+    "Visualization",
     "Other"
   ],
-  "activationEvents": [],
+  "keywords": [
+    "git",
+    "activity",
+    "tracking",
+    "productivity",
+    "visualization"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "gitlivelog.helloWorld",
-        "title": "Hello World"
+        "command": "gitlivelog.showWelcome",
+        "title": "Show Welcome Screen",
+        "category": "GitLiveLog"
+      },
+      {
+        "command": "gitlivelog.startTracking",
+        "title": "Start Tracking",
+        "category": "GitLiveLog"
+      },
+      {
+        "command": "gitlivelog.pauseTracking",
+        "title": "Pause Tracking",
+        "category": "GitLiveLog"
+      },
+      {
+        "command": "gitlivelog.showStats",
+        "title": "Show Activity Stats",
+        "category": "GitLiveLog"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "GitLiveLog",
+      "properties": {
+        "gitlivelog.logLocation": {
+          "type": "string",
+          "default": "",
+          "description": "Location where activity logs will be stored"
+        },
+        "gitlivelog.trackFileTypes": {
+          "type": "boolean",
+          "default": true,
+          "description": "Track file types and directories"
+        },
+        "gitlivelog.trackFunctions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Track function-level changes"
+        },
+        "gitlivelog.aiSummaries": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable AI-powered summaries"
+        },
+        "gitlivelog.interval": {
+          "type": "number",
+          "default": 30,
+          "description": "Activity logging interval in minutes"
+        },
+        "gitlivelog.setupComplete": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the initial setup has been completed"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "pnpm run package",
