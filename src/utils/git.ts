@@ -1,7 +1,34 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 
+// Custom error types
+export class GitError extends Error {
+    constructor(message: string, public readonly code: string) {
+        super(message);
+        this.name = 'GitError';
+    }
+}
+
+// Configuration management
+export class GitConfig {
+    private static readonly CONFIG_SECTION = 'gitlivelog';
+    
+    static getExcludePatterns(): string[] {
+        return vscode.workspace.getConfiguration(this.CONFIG_SECTION).get('exclude', []);
+    }
+    
+    static getCommitFrequency(): number {
+        return vscode.workspace.getConfiguration(this.CONFIG_SECTION).get('commitFrequency', 30);
+    }
+
+    static getShowCommitDialog(): boolean {
+        return vscode.workspace.getConfiguration(this.CONFIG_SECTION).get('showCommitDialog', false);
+    }
+}
+
+// Git-related interfaces
 export interface GitExtension {
     getAPI(version: number): GitAPI;
 }
@@ -30,16 +57,42 @@ export interface GitChange {
     status: number;
 }
 
+interface GitDiagnostics {
+    gitVersion: string;
+    repositoryStatus: string;
+    lastSync: Date | null;
+    pendingChanges: number;
+}
+
 export class GitService {
     private static instance: GitService;
     private gitAPI: GitAPI | undefined;
     private currentRepository: Repository | undefined;
+    private repositories: Map<string, Repository> = new Map();
+    private commandQueue: Array<() => Promise<void>> = [];
+    private isProcessingQueue = false;
+    private cachedChanges: Map<string, { changes: GitChange[], timestamp: number }> = new Map();
+    private readonly CACHE_TIMEOUT = 5000; // 5 seconds
+
+    // State management
+    private repositoryState: {
+        isInitialized: boolean;
+        lastSync: Date | null;
+        pendingChanges: number;
+    } = {
+        isInitialized: false,
+        lastSync: null,
+        pendingChanges: 0
+    };
+
+    private stateChangeEmitter = new vscode.EventEmitter<void>();
+    public readonly onStateChange = this.stateChangeEmitter.event;
 
     private constructor() {
         console.log('GitService: Initializing...');
     }
 
-    private findGitPath(): string | undefined {
+    private async findGitPath(): Promise<string | undefined> {
         console.log('GitService: Looking for Git installation...');
         
         // First check VS Code settings
@@ -51,110 +104,88 @@ export class GitService {
             return gitPath;
         }
 
-        // Common Git installation paths on Windows
-        const commonPaths = [
-            'C:\\Program Files\\Git\\bin\\git.exe',
-            'C:\\Program Files (x86)\\Git\\bin\\git.exe',
-            'C:\\Program Files\\Git\\cmd\\git.exe',
-            'C:\\Program Files (x86)\\Git\\cmd\\git.exe'
-        ];
+        // Get platform-specific Git paths
+        const platform = os.platform();
+        const gitPaths = this.getPlatformGitPaths(platform);
 
-        // Check if Git is in PATH
+        // Add paths from PATH environment variable
         const pathEnv = process.env.PATH || '';
         const pathDirs = pathEnv.split(path.delimiter);
+        const executableName = platform === 'win32' ? 'git.exe' : 'git';
         
-        // Add potential Git paths from PATH environment variable
         pathDirs.forEach(dir => {
-            const gitExePath = path.join(dir, 'git.exe');
-            if (!commonPaths.includes(gitExePath)) {
-                commonPaths.push(gitExePath);
+            const gitExePath = path.join(dir, executableName);
+            if (!gitPaths.includes(gitExePath)) {
+                gitPaths.push(gitExePath);
             }
         });
 
-        // Try to find Git in common locations
-        for (const path of commonPaths) {
+        // Try to find Git in all possible locations
+        for (const gitPath of gitPaths) {
             try {
-                if (fs.existsSync(path)) {
-                    console.log('GitService: Found Git at:', path);
-                    return path;
+                if (fs.existsSync(gitPath)) {
+                    console.log('GitService: Found Git at:', gitPath);
+                    return gitPath;
                 }
             } catch (error) {
                 // Ignore errors checking paths
             }
         }
 
-        console.log('GitService: Checking if git is available in PATH...');
+        // If git is in PATH, just return 'git'
         try {
-            // If git is in PATH, just return 'git'
             return 'git';
         } catch (error) {
-            console.error('GitService: Git not found in common locations');
+            this.handleError(error, 'find Git installation');
             return undefined;
         }
+    }
+
+    private getPlatformGitPaths(platform: string): string[] {
+        switch (platform) {
+            case 'win32':
+                return [
+                    'C:\\Program Files\\Git\\bin\\git.exe',
+                    'C:\\Program Files (x86)\\Git\\bin\\git.exe',
+                    'C:\\Program Files\\Git\\cmd\\git.exe',
+                    'C:\\Program Files (x86)\\Git\\cmd\\git.exe',
+                    path.join(os.homedir(), 'AppData', 'Local', 'Programs', 'Git', 'bin', 'git.exe'),
+                    path.join(os.homedir(), 'scoop', 'apps', 'git', 'current', 'bin', 'git.exe')
+                ];
+            case 'darwin':
+                return [
+                    '/usr/bin/git',
+                    '/usr/local/bin/git',
+                    '/opt/homebrew/bin/git'
+                ];
+            default: // Linux and others
+                return [
+                    '/usr/bin/git',
+                    '/usr/local/bin/git',
+                    '/opt/local/bin/git'
+                ];
+        }
+    }
+
+    private handleError(error: unknown, operation: string): never {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new GitError(`Failed to ${operation}: ${message}`, 'GIT_OP_FAILED');
     }
 
     public async initialize(): Promise<void> {
         try {
             console.log('GitService: Looking for Git extension...');
             
-            // Try to initialize with retries
             let retryCount = 0;
             const maxRetries = 3;
-            const retryDelay = 1000; // 1 second
+            const retryDelay = 1000;
 
             while (retryCount < maxRetries) {
                 try {
-                    const extension = vscode.extensions.getExtension<GitExtension>('vscode.git');
-                    if (!extension) {
-                        throw new Error('Git extension not found');
-                    }
-
-                    if (!extension.isActive) {
-                        console.log('GitService: Activating Git extension...');
-                        await extension.activate();
-                        // Wait a bit after activation
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                    }
-
-                    console.log('GitService: Getting Git API...');
-                    const gitExtension = extension.exports;
-                    this.gitAPI = gitExtension.getAPI(1);
-
-                    // Find Git installation
-                    const gitPath = this.findGitPath();
-                    if (!gitPath) {
-                        throw new Error('Git not found. Please install Git and configure its path in VS Code settings.');
-                    }
-
-                    // Update VS Code Git path setting if needed
-                    const config = vscode.workspace.getConfiguration('git');
-                    if (!config.get('path')) {
-                        console.log('GitService: Updating VS Code Git path setting to:', gitPath);
-                        await config.update('path', gitPath, true);
-                    }
-
-                    // Wait for workspace to be ready
-                    if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
-                        console.log('GitService: Waiting for workspace to be ready...');
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                        if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
-                            throw new Error('No workspace folder open');
-                        }
-                    }
-
-                    // Try to initialize repository
-                    const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
-                    
-                    // Check if .git directory exists
-                    if (!await this.isGitRepository(workspaceRoot)) {
-                        console.log('GitService: Initializing new Git repository...');
-                        await this.initializeRepository(workspaceRoot);
-                    }
-
-                    await this.setRepository(workspaceRoot);
-                    console.log('GitService: Successfully initialized');
+                    await this.initializeWithRetry();
+                    this.repositoryState.isInitialized = true;
+                    this.stateChangeEmitter.fire();
                     return;
-
                 } catch (error) {
                     retryCount++;
                     if (retryCount === maxRetries) {
@@ -165,9 +196,43 @@ export class GitService {
                 }
             }
         } catch (error) {
-            console.error('GitService: Failed to initialize Git API:', error);
-            throw error;
+            this.handleError(error, 'initialize Git service');
         }
+    }
+
+    private async initializeWithRetry(): Promise<void> {
+        const extension = vscode.extensions.getExtension<GitExtension>('vscode.git');
+        if (!extension) {
+            throw new GitError('Git extension not found', 'GIT_EXT_NOT_FOUND');
+        }
+
+        if (!extension.isActive) {
+            await extension.activate();
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        this.gitAPI = extension.exports.getAPI(1);
+        const gitPath = await this.findGitPath();
+        
+        if (!gitPath) {
+            throw new GitError('Git not found. Please install Git and configure its path.', 'GIT_NOT_FOUND');
+        }
+
+        const config = vscode.workspace.getConfiguration('git');
+        if (!config.get('path')) {
+            await config.update('path', gitPath, true);
+        }
+
+        if (!vscode.workspace.workspaceFolders?.length) {
+            throw new GitError('No workspace folder open', 'NO_WORKSPACE');
+        }
+
+        const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+        if (!await this.isGitRepository(workspaceRoot)) {
+            await this.initializeRepository(workspaceRoot);
+        }
+
+        await this.setRepository(workspaceRoot);
     }
 
     private async isGitRepository(path: string): Promise<boolean> {
@@ -279,10 +344,25 @@ export class GitService {
 
     public async commit(message: string): Promise<void> {
         if (!this.currentRepository) {
-            throw new Error('Repository not initialized');
+            throw new GitError('Repository not initialized', 'REPO_NOT_INIT');
         }
 
         await this.currentRepository.commit(message);
+    }
+
+    public async push(): Promise<void> {
+        if (!this.currentRepository) {
+            throw new GitError('Repository not initialized', 'REPO_NOT_INIT');
+        }
+
+        try {
+            // Use VS Code's built-in Git commands for pushing
+            await vscode.commands.executeCommand('git.push');
+            console.log('GitService: Successfully pushed changes');
+        } catch (error) {
+            console.error('GitService: Failed to push changes:', error);
+            throw new GitError('Failed to push changes', 'PUSH_FAILED');
+        }
     }
 
     public async getChangedFiles(): Promise<string[]> {

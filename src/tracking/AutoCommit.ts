@@ -2,43 +2,120 @@ import * as vscode from 'vscode';
 import { GitService } from '../utils/git';
 import { StatusBar } from '../ui/StatusBar';
 
+interface ActivityState {
+    lastActivityTime: Date;
+    changeCount: number;
+    debounceTimer?: NodeJS.Timeout;
+    pendingChanges: boolean;
+}
+
 export class AutoCommit {
     private static instance: AutoCommit;
-    private timer: NodeJS.Timeout | undefined;
-    private lastCommit: Date | undefined;
+    private commitCheckTimer?: NodeJS.Timeout;
+    private lastCommit: Date = new Date();
     private gitService: GitService;
     private statusBar: StatusBar;
+    private activityState: ActivityState = {
+        lastActivityTime: new Date(),
+        changeCount: 0,
+        pendingChanges: false
+    };
+
+    // Constants
+    private readonly MIN_CHANGES_FOR_COMMIT = 3; // Minimum number of changes before considering a commit
+    private readonly MAX_CHECK_INTERVAL = 300000; // 5 minutes in milliseconds
+    
+    // Dynamic settings
+    private commitFrequencyMs: number = 60000; // Default 1 minute, will be updated from settings
 
     private constructor() {
         this.gitService = GitService.getInstance();
         this.statusBar = StatusBar.getInstance();
+        this.setupActivityListeners();
     }
 
-    public static getInstance(): AutoCommit {
-        if (!AutoCommit.instance) {
-            AutoCommit.instance = new AutoCommit();
+    private updateTimingSettings(): void {
+        const config = vscode.workspace.getConfiguration('gitlivelog');
+        const commitFrequencyMinutes = config.get<number>('commitFrequency', 1);
+        
+        // Convert minutes to milliseconds
+        this.commitFrequencyMs = commitFrequencyMinutes * 60 * 1000;
+        
+        console.log(`GitLiveLog: Updated commit frequency to ${commitFrequencyMinutes} minutes`);
+    }
+
+    private setupActivityListeners() {
+        // Listen for file changes
+        vscode.workspace.onDidChangeTextDocument(() => {
+            this.handleActivity('edit');
+        });
+
+        // Listen for file creation/deletion
+        vscode.workspace.onDidCreateFiles(() => {
+            this.handleActivity('create');
+        });
+
+        vscode.workspace.onDidDeleteFiles(() => {
+            this.handleActivity('delete');
+        });
+
+        // Listen for file saves
+        vscode.workspace.onDidSaveTextDocument(() => {
+            this.handleActivity('save');
+        });
+
+        // Listen for configuration changes
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('gitlivelog.commitFrequency')) {
+                this.updateTimingSettings();
+            }
+        });
+    }
+
+    private handleActivity(type: 'edit' | 'create' | 'delete' | 'save') {
+        this.activityState.lastActivityTime = new Date();
+        this.activityState.changeCount++;
+        this.activityState.pendingChanges = true;
+
+        // Clear existing debounce timer
+        if (this.activityState.debounceTimer) {
+            clearTimeout(this.activityState.debounceTimer);
         }
-        return AutoCommit.instance;
     }
 
     public async startTracking(): Promise<void> {
         try {
-            // Initialize Git service
             await this.gitService.initialize();
 
-            // Get configuration
-            const config = vscode.workspace.getConfiguration('gitlivelog');
-            const interval = config.get<number>('commitFrequency', 30);
+            // Update timing settings from configuration
+            this.updateTimingSettings();
 
-            // Start timer
-            if (this.timer) {
-                clearTimeout(this.timer);
+            // Start timer for regular checks
+            if (this.commitCheckTimer) {
+                clearInterval(this.commitCheckTimer);
             }
-            this.timer = setInterval(() => this.checkAndCommit(), interval * 60 * 1000) as unknown as NodeJS.Timeout;
-            
-            // Update configuration and status
+
+            // Check exactly at the commit frequency interval
+            this.commitCheckTimer = setInterval(async () => {
+                const now = new Date();
+                const timeSinceLastCommit = now.getTime() - this.lastCommit.getTime();
+
+                // Only commit if we've waited the full interval
+                if (timeSinceLastCommit >= this.commitFrequencyMs) {
+                    await this.checkForCommit();
+                }
+            }, Math.min(this.commitFrequencyMs, this.MAX_CHECK_INTERVAL));
+
+            const config = vscode.workspace.getConfiguration('gitlivelog');
             await config.update('isTracking', true, true);
             this.statusBar.updateStatus(true, this.lastCommit);
+
+            // Reset activity state
+            this.activityState = {
+                lastActivityTime: new Date(),
+                changeCount: 0,
+                pendingChanges: false
+            };
 
             vscode.window.showInformationMessage('GitLiveLog: Started tracking your coding activity');
         } catch (error) {
@@ -47,82 +124,43 @@ export class AutoCommit {
         }
     }
 
-    public async stopTracking(): Promise<void> {
-        if (this.timer) {
-            clearTimeout(this.timer);
-            this.timer = undefined;
-        }
-
-        const config = vscode.workspace.getConfiguration('gitlivelog');
-        await config.update('isTracking', false, true);
-        this.statusBar.updateStatus(false);
-
-        vscode.window.showInformationMessage('GitLiveLog: Stopped tracking your coding activity');
-    }
-
-    private async checkAndCommit(): Promise<void> {
+    private async checkForCommit(): Promise<void> {
         try {
-            const config = vscode.workspace.getConfiguration('gitlivelog');
-            const excludePatterns = config.get<string[]>('exclude', []);
-            
-            // Filter changes based on exclude patterns
-            const hasChanges = await this.gitService.hasUncommittedChanges(excludePatterns);
+            // Only proceed if we have enough changes
+            if (this.activityState.changeCount < this.MIN_CHANGES_FOR_COMMIT) {
+                console.log('GitLiveLog: Not enough changes for commit');
+                return;
+            }
+
+            const hasChanges = await this.gitService.hasUncommittedChanges();
             if (!hasChanges) {
                 console.log('GitLiveLog: No changes to commit');
                 return;
             }
 
-            // Get the list of changed files for notification
-            const changedFiles = await this.gitService.getChangedFiles();
+            // Calculate time since last activity
+            const now = new Date();
+            const timeSinceLastActivity = now.getTime() - this.activityState.lastActivityTime.getTime();
+            const timeSinceLastCommit = now.getTime() - this.lastCommit.getTime();
             
-            // Show notification about pending commit
-            vscode.window.withProgress({
-                location: vscode.ProgressLocation.Notification,
-                title: "GitLiveLog",
-                cancellable: false
-            }, async (progress) => {
-                progress.report({ message: 'Preparing to commit changes...' });
-                
-                const showDialog = config.get<boolean>('showCommitDialog', false);
-                let shouldCommit = true;
+            // Ensure we've waited the full commit frequency
+            if (timeSinceLastCommit < this.commitFrequencyMs) {
+                console.log(`GitLiveLog: Waiting for full commit interval (${Math.round((this.commitFrequencyMs - timeSinceLastCommit) / 1000)}s remaining)`);
+                return;
+            }
 
-                if (showDialog) {
-                    // Create a detailed message about changes
-                    const changeMessage = changedFiles.length > 5 
-                        ? `${changedFiles.slice(0, 5).join('\n')}...\nand ${changedFiles.length - 5} more files`
-                        : changedFiles.join('\n');
+            // Only commit if there has been recent activity
+            if (timeSinceLastActivity > this.commitFrequencyMs) {
+                console.log('GitLiveLog: No recent activity, skipping commit');
+                return;
+            }
 
-                    const result = await vscode.window.showInformationMessage(
-                        `GitLiveLog: Ready to commit the following changes?\n\n${changeMessage}`,
-                        { modal: true },
-                        'Yes', 'No'
-                    );
-                    shouldCommit = result === 'Yes';
-                } else {
-                    // Just notify about the commit
-                    vscode.window.setStatusBarMessage('GitLiveLog: Committing changes...', 3000);
-                }
+            await this.commitChanges();
+            
+            // Reset activity state after successful commit
+            this.activityState.changeCount = 0;
+            this.activityState.pendingChanges = false;
 
-                if (shouldCommit) {
-                    progress.report({ message: 'Committing changes...' });
-                    await this.commitChanges();
-                    progress.report({ message: 'Changes committed successfully!' });
-                    
-                    // Show notification with commit details
-                    const message = changedFiles.length === 1 
-                        ? '1 file was committed'
-                        : `${changedFiles.length} files were committed`;
-                        
-                    vscode.window.showInformationMessage(
-                        `GitLiveLog: ${message}`,
-                        'View Changes'
-                    ).then(selection => {
-                        if (selection === 'View Changes') {
-                            vscode.commands.executeCommand('git.viewHistory');
-                        }
-                    });
-                }
-            });
         } catch (error) {
             console.error('Failed to check/commit changes:', error);
             vscode.window.showErrorMessage('GitLiveLog: Failed to commit changes. Please check Git configuration.');
@@ -137,6 +175,16 @@ export class AutoCommit {
             await this.gitService.stageAll();
             await this.gitService.commit(message);
             
+            // Push changes after commit
+            try {
+                await this.gitService.push();
+                console.log('GitLiveLog: Successfully pushed changes');
+            } catch (error) {
+                // Don't fail the commit if push fails
+                console.error('GitLiveLog: Failed to push changes:', error);
+                vscode.window.showWarningMessage('GitLiveLog: Changes committed but failed to push. Will retry on next sync.');
+            }
+            
             this.lastCommit = new Date();
             this.statusBar.updateStatus(true, this.lastCommit);
             
@@ -149,8 +197,15 @@ export class AutoCommit {
 
     public async forceSync(): Promise<void> {
         try {
-            await this.checkAndCommit();
-            vscode.window.showInformationMessage('GitLiveLog: Successfully synced changes');
+            await this.checkForCommit();
+            
+            // Always try to push during force sync, even if there were no new commits
+            try {
+                await this.gitService.push();
+                vscode.window.showInformationMessage('GitLiveLog: Successfully synced and pushed changes');
+            } catch (error) {
+                vscode.window.showErrorMessage('GitLiveLog: Failed to push changes. Please check your Git configuration.');
+            }
         } catch (error) {
             console.error('Failed to force sync:', error);
             vscode.window.showErrorMessage('GitLiveLog: Failed to sync changes. Please check Git configuration.');
@@ -158,9 +213,39 @@ export class AutoCommit {
     }
 
     public dispose(): void {
-        if (this.timer) {
-            clearTimeout(this.timer);
-            this.timer = undefined;
+        if (this.commitCheckTimer) {
+            clearInterval(this.commitCheckTimer);
+            this.commitCheckTimer = undefined;
         }
+
+        if (this.activityState.debounceTimer) {
+            clearTimeout(this.activityState.debounceTimer);
+            this.activityState.debounceTimer = undefined;
+        }
+    }
+
+    public async stopTracking(): Promise<void> {
+        if (this.commitCheckTimer) {
+            clearInterval(this.commitCheckTimer);
+            this.commitCheckTimer = undefined;
+        }
+
+        if (this.activityState.debounceTimer) {
+            clearTimeout(this.activityState.debounceTimer);
+            this.activityState.debounceTimer = undefined;
+        }
+
+        const config = vscode.workspace.getConfiguration('gitlivelog');
+        await config.update('isTracking', false, true);
+        this.statusBar.updateStatus(false);
+
+        vscode.window.showInformationMessage('GitLiveLog: Stopped tracking your coding activity');
+    }
+
+    public static getInstance(): AutoCommit {
+        if (!AutoCommit.instance) {
+            AutoCommit.instance = new AutoCommit();
+        }
+        return AutoCommit.instance;
     }
 }
