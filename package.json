@@ -1,112 +1,110 @@
 {
-  "name": "gitlivelog",
-  "displayName": "GitLiveLog",
-  "description": "Tired of your GitHub activity graph making you look like you’ve been on a year-long sabbatical? Let GitLiveLog save you from commit embarrassment! 🚀 This VS Code extension logs every actual keystroke of effort, not just squash merges or main-branch shenanigans.",
-  "version": "0.0.1",
-  "engines": {
-    "vscode": "^1.96.0"
-  },
-  "categories": [
-    "SCM",
-    "Visualization",
-    "Other"
-  ],
-  "keywords": [
-    "git",
-    "activity",
-    "tracking",
-    "productivity",
-    "visualization"
-  ],
-  "activationEvents": [
-    "onStartupFinished"
-  ],
-  "main": "./dist/extension.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "gitlivelog.showWelcome",
-        "title": "Show Welcome Screen",
-        "category": "GitLiveLog"
-      },
-      {
-        "command": "gitlivelog.startTracking",
-        "title": "Start Tracking",
-        "category": "GitLiveLog"
-      },
-      {
-        "command": "gitlivelog.pauseTracking",
-        "title": "Pause Tracking",
-        "category": "GitLiveLog"
-      },
-      {
-        "command": "gitlivelog.showStats",
-        "title": "Show Activity Stats",
-        "category": "GitLiveLog"
-      }
+    "name": "gitlivelog",
+    "displayName": "GitLiveLog",
+    "description": "Tired of your GitHub activity graph making you look like you’ve been on a year-long sabbatical? Let GitLiveLog save you from commit embarrassment! 🚀 This VS Code extension commits every actual keystroke of effort.",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.85.0"
+    },
+    "categories": [
+        "Other",
+        "SCM Providers"
     ],
-    "configuration": {
-      "title": "GitLiveLog",
-      "properties": {
-        "gitlivelog.logLocation": {
-          "type": "string",
-          "default": "",
-          "description": "Location where activity logs will be stored"
-        },
-        "gitlivelog.trackFileTypes": {
-          "type": "boolean",
-          "default": true,
-          "description": "Track file types and directories"
-        },
-        "gitlivelog.trackFunctions": {
-          "type": "boolean",
-          "default": true,
-          "description": "Track function-level changes"
-        },
-        "gitlivelog.aiSummaries": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable AI-powered summaries"
-        },
-        "gitlivelog.interval": {
-          "type": "number",
-          "default": 30,
-          "description": "Activity logging interval in minutes"
-        },
-        "gitlivelog.setupComplete": {
-          "type": "boolean",
-          "default": false,
-          "description": "Whether the initial setup has been completed"
+    "activationEvents": [
+        "onStartupFinished",
+        "workspaceContains:.git"
+    ],
+    "extensionDependencies": [
+        "vscode.git"
+    ],
+    "main": "./dist/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "gitlivelog.showCommands",
+                "title": "GitLiveLog: Show Commands"
+            },
+            {
+                "command": "gitlivelog.showWelcome",
+                "title": "GitLiveLog: Show Welcome Screen"
+            },
+            {
+                "command": "gitlivelog.startTracking",
+                "title": "GitLiveLog: Start Tracking",
+                "when": "!config.gitlivelog.isTracking"
+            },
+            {
+                "command": "gitlivelog.stopTracking",
+                "title": "GitLiveLog: Stop Tracking",
+                "when": "config.gitlivelog.isTracking"
+            },
+            {
+                "command": "gitlivelog.forceSync",
+                "title": "GitLiveLog: Force Sync Now",
+                "when": "config.gitlivelog.isTracking"
+            }
+        ],
+        "configuration": {
+            "title": "GitLiveLog",
+            "properties": {
+                "gitlivelog.isTracking": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Whether GitLiveLog is currently tracking changes"
+                },
+                "gitlivelog.repoName": {
+                    "type": "string",
+                    "default": "code-tracking",
+                    "description": "Name of the GitHub repository to store your coding activity"
+                },
+                "gitlivelog.commitFrequency": {
+                    "type": "number",
+                    "default": 30,
+                    "minimum": 1,
+                    "maximum": 120,
+                    "description": "How often to commit changes (in minutes)"
+                },
+                "gitlivelog.exclude": {
+                    "type": "array",
+                    "default": ["node_modules", "dist", ".git", "*.log"],
+                    "description": "Patterns to exclude from tracking",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "gitlivelog.showCommitDialog": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Show confirmation dialog before committing changes"
+                }
+            }
         }
-      }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run package",
+        "compile": "webpack",
+        "watch": "webpack --watch",
+        "package": "webpack --mode production --devtool hidden-source-map",
+        "compile-tests": "tsc -p . --outDir out",
+        "watch-tests": "tsc -p . -w --outDir out",
+        "pretest": "npm run compile-tests && npm run compile && npm run lint",
+        "lint": "eslint src --ext ts",
+        "test": "vscode-test"
+    },
+    "devDependencies": {
+        "@types/vscode": "^1.85.0",
+        "@types/glob": "^8.1.0",
+        "@types/mocha": "^10.0.6",
+        "@types/node": "20.x",
+        "@typescript-eslint/eslint-plugin": "^6.15.0",
+        "@typescript-eslint/parser": "^6.15.0",
+        "eslint": "^8.56.0",
+        "glob": "^10.3.10",
+        "mocha": "^10.2.0",
+        "typescript": "^5.3.3",
+        "ts-loader": "^9.5.1",
+        "webpack": "^5.89.0",
+        "webpack-cli": "^5.1.4",
+        "@vscode/test-electron": "^2.3.8"
     }
-  },
-  "scripts": {
-    "vscode:prepublish": "pnpm run package",
-    "compile": "webpack",
-    "watch": "webpack --watch",
-    "package": "webpack --mode production --devtool hidden-source-map",
-    "compile-tests": "tsc -p . --outDir out",
-    "watch-tests": "tsc -p . -w --outDir out",
-    "pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
-    "lint": "eslint src",
-    "test": "vscode-test"
-  },
-  "devDependencies": {
-    "@commitlint/cli": "^19.6.1",
-    "@commitlint/config-conventional": "^19.6.0",
-    "@types/mocha": "^10.0.10",
-    "@types/node": "20.x",
-    "@types/vscode": "^1.96.0",
-    "@typescript-eslint/eslint-plugin": "^8.17.0",
-    "@typescript-eslint/parser": "^8.17.0",
-    "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.1",
-    "eslint": "^9.16.0",
-    "husky": "^9.1.7",
-    "ts-loader": "^9.5.1",
-    "typescript": "^5.7.2",
-    "webpack": "^5.95.0",
-    "webpack-cli": "^5.1.4"
-  }
 }

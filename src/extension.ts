@@ -1,61 +1,160 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import { AutoCommit } from './tracking/AutoCommit';
+import { GitService } from './utils/git';
+import { StatusBar } from './ui/StatusBar';
 import { WelcomePanel } from './webview/welcome';
-import { StatsPanel } from './webview/stats';
-import { ActivityTracker } from './tracking/ActivityTracker';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('GitLiveLog is now active!');
+export async function activate(context: vscode.ExtensionContext) {
+    console.log('GitLiveLog: Extension is being activated...');
 
-	// Initialize activity tracker
-	const tracker = ActivityTracker.getInstance();
+    const autoCommit = AutoCommit.getInstance();
+    const gitService = GitService.getInstance();
+    const statusBar = StatusBar.getInstance();
 
-	// Check if this is first activation
-	const config = vscode.workspace.getConfiguration('gitlivelog');
-	const setupComplete = config.get('setupComplete');
+    // Check if this is the first installation
+    const isFirstInstall = !context.globalState.get('gitlivelog.installed');
+    if (isFirstInstall) {
+        // Mark as installed
+        await context.globalState.update('gitlivelog.installed', true);
+        
+        // Show welcome screen
+        WelcomePanel.show(context.extensionPath);
+        
+        // Start tracking automatically
+        try {
+            await autoCommit.startTracking();
+            vscode.window.showInformationMessage('GitLiveLog: Started tracking your coding journey!');
+        } catch (error) {
+            console.error('Failed to start initial tracking:', error);
+            vscode.window.showErrorMessage('GitLiveLog: Please configure Git before starting to track.');
+        }
+    }
 
-	if (!setupComplete) {
-		// Show welcome screen on first activation
-		WelcomePanel.show(context.extensionUri);
-	} else {
-		// Start tracking if setup is complete
-		tracker.startTracking();
-	}
+    // Register commands
+    let disposables = [
+        vscode.commands.registerCommand('gitlivelog.showCommands', async () => {
+            const config = vscode.workspace.getConfiguration('gitlivelog');
+            const isTracking = config.get<boolean>('isTracking', true);
 
-	// Register commands
-	let disposables = [
-		vscode.commands.registerCommand('gitlivelog.showWelcome', () => {
-			WelcomePanel.show(context.extensionUri);
-		}),
-		vscode.commands.registerCommand('gitlivelog.startTracking', () => {
-			tracker.startTracking();
-			vscode.window.showInformationMessage('GitLiveLog: Activity tracking started');
-		}),
-		vscode.commands.registerCommand('gitlivelog.pauseTracking', () => {
-			tracker.pauseTracking();
-			vscode.window.showInformationMessage('GitLiveLog: Activity tracking paused');
-		}),
-		vscode.commands.registerCommand('gitlivelog.showStats', async () => {
-			try {
-				const now = Date.now();
-				const dayStart = now - (24 * 60 * 60 * 1000); // Last 24 hours
-				const summary = await tracker.getActivitySummary(dayStart, now);
-				StatsPanel.show(context.extensionUri, summary);
-			} catch (error: any) {
-				vscode.window.showErrorMessage(`Failed to load activity stats: ${error.message}`);
-			}
-		})
-	];
+            const items: vscode.QuickPickItem[] = [
+                {
+                    label: isTracking ? "$(stop-circle) Stop Tracking" : "$(play-circle) Start Tracking",
+                    description: isTracking ? "Stop tracking your coding activity" : "Start tracking your coding activity",
+                    detail: isTracking ? "Currently tracking your changes" : "Not currently tracking"
+                },
+                {
+                    label: "$(sync) Force Sync Now",
+                    description: "Manually sync your changes",
+                    detail: "Commit any pending changes immediately"
+                },
+                {
+                    label: "$(gear) Open Settings",
+                    description: "Configure GitLiveLog settings",
+                    detail: "Customize commit frequency, exclusions, and other options"
+                } 
+            ];
 
-	context.subscriptions.push(...disposables);
+            const selected = await vscode.window.showQuickPick(items, {
+                placeHolder: 'Select a GitLiveLog command...',
+                matchOnDescription: true,
+                matchOnDetail: true
+            });
+
+            if (selected) {
+                switch (selected.label) {
+                    case "$(notebook-state-success) Show Welcome Screen":
+                        WelcomePanel.show(context.extensionPath);
+                        break;
+                    case "$(stop-circle) Stop Tracking":
+                        await autoCommit.stopTracking();
+                        break;
+                    case "$(play-circle) Start Tracking":
+                        await autoCommit.startTracking();
+                        break;
+                    case "$(sync) Force Sync Now":
+                        await autoCommit.forceSync();
+                        break;
+                    case "$(gear) Open Settings":
+                        await vscode.commands.executeCommand('workbench.action.openSettings', 'gitlivelog');
+                        break;
+                    case "$(history) View History":
+                        await vscode.commands.executeCommand('git.viewHistory');
+                        break;
+                }
+            }
+        }),
+
+        vscode.commands.registerCommand('gitlivelog.showWelcome', () => {
+            WelcomePanel.show(context.extensionPath);
+        }),
+
+        vscode.commands.registerCommand('gitlivelog.startTracking', async () => {
+            try {
+                await autoCommit.startTracking();
+            } catch (error) {
+                vscode.window.showErrorMessage('Failed to start tracking. Please check Git configuration.');
+            }
+        }),
+
+        vscode.commands.registerCommand('gitlivelog.stopTracking', async () => {
+            await autoCommit.stopTracking();
+        }),
+
+        vscode.commands.registerCommand('gitlivelog.forceSync', async () => {
+            await autoCommit.forceSync();
+        })
+    ];
+
+    // Add disposables to context
+    context.subscriptions.push(...disposables);
+
+    // Initialize status bar and restore tracking state
+    const config = vscode.workspace.getConfiguration('gitlivelog');
+    const isTracking = config.get<boolean>('isTracking', true); // Default to true
+    
+    if (isTracking) {
+        // Delay the initialization slightly to allow VS Code to fully load
+        setTimeout(async () => {
+            try {
+                await gitService.initialize();
+                await autoCommit.startTracking();
+            } catch (error) {
+                console.error('Failed to restore tracking state:', error);
+                // Don't show error message here as it might be annoying on every VS Code start
+                // Just update the configuration to reflect the actual state
+                await config.update('isTracking', false, true);
+                
+                // Show status bar in inactive state
+                statusBar.updateStatus(false);
+                
+                // If this is a new installation, show a more helpful message
+                if (context.globalState.get('gitlivelog.installed') === undefined) {
+                    vscode.window.showInformationMessage(
+                        'GitLiveLog needs a Git repository to track your changes. Would you like to initialize one?',
+                        'Yes', 'No'
+                    ).then(async answer => {
+                        if (answer === 'Yes') {
+                            try {
+                                await gitService.initialize();
+                                await autoCommit.startTracking();
+                                vscode.window.showInformationMessage('GitLiveLog: Started tracking your coding journey!');
+                            } catch (initError) {
+                                vscode.window.showErrorMessage('Failed to initialize Git repository. Please try again later.');
+                            }
+                        }
+                    });
+                }
+            }
+        }, 2000); // Wait 2 seconds before initializing
+    }
 }
 
 // This method is called when your extension is deactivated
 export function deactivate() {
-	ActivityTracker.getInstance().dispose();
+    const autoCommit = AutoCommit.getInstance();
+    autoCommit.dispose();
 }

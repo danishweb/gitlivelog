@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to GitLiveLog</title>
+    <style>
+        body {
+            padding: 20px;
+            line-height: 1.6;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: var(--vscode-editor-foreground);
+            border-bottom: 1px solid var(--vscode-panel-border);
+            padding-bottom: 10px;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            background: var(--vscode-editor-background);
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 5px;
+        }
+        button {
+            background: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 3px;
+            margin: 5px;
+        }
+        button:hover {
+            background: var(--vscode-button-hoverBackground);
+        }
+        code {
+            background: var(--vscode-textBlockQuote-background);
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to GitLiveLog! 🚀</h1>
+        
+        <div class="section">
+            <h2>Quick Start</h2>
+            <p>GitLiveLog helps you track your coding journey by automatically logging your development activities. Here's how to get started:</p>
+            <ol>
+                <li>Click "Start Tracking" to begin monitoring your coding activity</li>
+                <li>GitLiveLog will automatically commit your changes every 30 minutes (configurable)</li>
+                <li>Your activity will be logged to a dedicated GitHub repository</li>
+            </ol>
+            <button onclick="startTracking()">Start Tracking</button>
+        </div>
+
+        <div class="section">
+            <h2>Configuration</h2>
+            <p>Customize GitLiveLog in your VS Code settings:</p>
+            <ul>
+                <li><code>gitlivelog.repoName</code>: Name of your tracking repository</li>
+                <li><code>gitlivelog.commitFrequency</code>: How often to commit (in minutes)</li>
+                <li><code>gitlivelog.exclude</code>: Patterns to exclude from tracking</li>
+                <li><code>gitlivelog.showCommitDialog</code>: Show confirmation before commits</li>
+            </ul>
+            <button onclick="openSettings()">Open Settings</button>
+        </div>
+
+        <div class="section">
+            <h2>Status Bar</h2>
+            <p>Monitor your tracking status in the VS Code status bar:</p>
+            <ul>
+                <li>🟢 Active: GitLiveLog is monitoring your activity</li>
+                <li>🔴 Inactive: Tracking is paused</li>
+                <li>⏱️ Last Sync: Time since last commit</li>
+            </ul>
+        </div>
+    </div>
+    <script>
+        const vscode = acquireVsCodeApi();
+        
+        function startTracking() {
+            vscode.postMessage({ command: 'startTracking' });
+        }
+        
+        function openSettings() {
+            vscode.postMessage({ command: 'openSettings' });
+        }
+    </script>
+</body>
+</html>
