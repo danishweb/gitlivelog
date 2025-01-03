@@ -27,6 +27,12 @@
     "configuration": {
       "title": "GitLiveLog",
       "properties": {
+        "gitlivelog.isTracking": {
+          "type": "boolean",
+          "default": false,
+          "description": "Indicates whether GitLiveLog is currently tracking changes",
+          "scope": "application"
+        },
         "gitlivelog.commitFrequency": {
           "type": "number",
           "default": 5,
@@ -37,7 +43,7 @@
         "gitlivelog.ai.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Enable AI-powered commit messages (requires Hugging Face API token)"
+          "description": "Enable AI-powered commit messages (requires Google Gemini API key)"
         },
         "gitlivelog.ai.maxDiffSize": {
           "type": "number",
@@ -46,10 +52,10 @@
           "maximum": 10000,
           "description": "Maximum size of code changes to send to AI for commit message generation (in characters)"
         },
-        "gitlivelog.ai.huggingFaceToken": {
+        "gitlivelog.ai.geminiApiKey": {
           "type": "string",
           "default": "",
-          "description": "Hugging Face API token for generating commit messages. Get one at https://huggingface.co/settings/tokens"
+          "description": "Google Gemini API key for generating commit messages. Get one at https://makersuite.google.com/app/apikey"
         }
       }
     }
@@ -82,6 +88,7 @@
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.1.3",
     "axios": "^1.7.9"
   }
 }

@@ -90,18 +90,15 @@ export class GitService {
     public readonly onStateChange = this.stateChangeEmitter.event;
 
     private constructor() {
-        console.log('GitService: Initializing...');
+        // Keep constructor lean
     }
 
     private async findGitPath(): Promise<string | undefined> {
-        console.log('GitService: Looking for Git installation...');
-        
         // First check VS Code settings
         const config = vscode.workspace.getConfiguration('git');
         let gitPath = config.get<string>('path');
         
         if (gitPath) {
-            console.log('GitService: Found Git path in VS Code settings:', gitPath);
             return gitPath;
         }
 
@@ -125,7 +122,6 @@ export class GitService {
         for (const gitPath of gitPaths) {
             try {
                 if (fs.existsSync(gitPath)) {
-                    console.log('GitService: Found Git at:', gitPath);
                     return gitPath;
                 }
             } catch (error) {
@@ -175,8 +171,6 @@ export class GitService {
 
     public async initialize(): Promise<void> {
         try {
-            console.log('GitService: Looking for Git extension...');
-            
             let retryCount = 0;
             const maxRetries = 3;
             const retryDelay = 1000;
@@ -192,7 +186,6 @@ export class GitService {
                     if (retryCount === maxRetries) {
                         throw error;
                     }
-                    console.log(`GitService: Initialization attempt ${retryCount} failed, retrying in ${retryDelay}ms...`);
                     await new Promise(resolve => setTimeout(resolve, retryDelay));
                 }
             }
@@ -275,7 +268,6 @@ export class GitService {
             throw new Error('Git API not initialized');
         }
 
-        console.log('GitService: Setting repository for workspace:', workspaceRoot);
         this.currentRepository = this.gitAPI.repositories.find(
             repo => repo.rootUri.fsPath === workspaceRoot
         );
@@ -286,7 +278,6 @@ export class GitService {
 
         // Verify repository access
         await this.currentRepository.status();
-        console.log('GitService: Repository access verified');
     }
 
     public async hasUncommittedChanges(excludePatterns: string[] = []): Promise<boolean> {
@@ -296,8 +287,7 @@ export class GitService {
 
         await this.currentRepository.status();
         const state = this.currentRepository.state;
-        
-        // Helper function to check if a file matches exclude patterns
+
         const isExcluded = (filePath: string): boolean => {
             return excludePatterns.some(pattern => {
                 if (pattern.startsWith('*')) {
@@ -359,7 +349,6 @@ export class GitService {
         try {
             // Use VS Code's built-in Git commands for pushing
             await vscode.commands.executeCommand('git.push');
-            console.log('GitService: Successfully pushed changes');
         } catch (error) {
             console.error('GitService: Failed to push changes:', error);
             throw new GitError('Failed to push changes', 'PUSH_FAILED');
@@ -413,9 +402,18 @@ export class GitService {
         }
 
         try {
-            // Get all changes, including staged and unstaged
-            const changes = await this.currentRepository.diff(true);
-            return changes || '';
+            await this.currentRepository.status();
+            
+            // Get unstaged changes
+            const unstagedChanges = await this.currentRepository.diff(false) || '';
+            
+            // Get staged changes
+            const stagedChanges = await this.currentRepository.diff(true) || '';
+            
+            // Combine both diffs
+            const combinedDiff = [unstagedChanges, stagedChanges].filter(diff => diff).join('\n');
+            
+            return combinedDiff;
         } catch (error) {
             console.error('Failed to get git diff:', error);
             throw new GitError('Failed to get changes', 'DIFF_FAILED');
