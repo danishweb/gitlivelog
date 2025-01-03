@@ -66,31 +66,6 @@ export class GeminiService {
     this.model = this.genAI.getGenerativeModel({ model: this.MODEL_NAME });
   }
 
-  private generatePrompt(gitDiff: string): string {
-    // Truncate diff if it's too long
-    const maxLength = vscode.workspace
-      .getConfiguration("gitlivelog.ai")
-      .get<number>("maxDiffSize", 5000);
-    const truncatedDiff =
-      gitDiff.length > maxLength
-        ? gitDiff.substring(0, maxLength) + "\n... (truncated)"
-        : gitDiff;
-
-    return `As a commit message generator, create a concise and clear conventional commit message for these changes:
-
-### Git Diff ###
-${truncatedDiff}
-### End Diff ###
-
-Instructions:
-1. Use conventional commit format: type(scope): description
-2. Types: feat, fix, docs, style, refactor, perf, test, chore
-3. Keep it concise (max 100 characters)
-4. Focus on the main change
-5. No body or footer needed
-6. Return ONLY the commit message, nothing else`;
-  }
-
   public async generateCommitMessage(gitDiff: string): Promise<string> {
     // Check if AI is enabled in settings
     const aiEnabled = vscode.workspace
@@ -111,7 +86,16 @@ Instructions:
         this.initializeModel();
       }
 
-      const prompt = this.generatePrompt(gitDiff);
+      // Truncate diff if it's too long
+      const maxLength = vscode.workspace
+        .getConfiguration("gitlivelog.ai")
+        .get<number>("maxDiffSize", 5000);
+      const truncatedDiff =
+        gitDiff.length > maxLength
+          ? gitDiff.substring(0, maxLength) + "\n... (truncated)"
+          : gitDiff;
+
+      const prompt = this.generatePrompt(truncatedDiff);
 
       // Generate commit message
       const result = await this.model.generateContent(prompt);
@@ -128,6 +112,22 @@ Instructions:
       }
       return `chore: update ${new Date().toISOString()}`;
     }
+  }
+
+  private generatePrompt(gitDiff: string): string {
+    return `As a commit message generator, create a concise and clear conventional commit message for these changes:
+
+### Git Diff ###
+${gitDiff}
+### End Diff ###
+
+Instructions:
+1. Use conventional commit format: type(scope): description
+2. Types: feat, fix, docs, style, refactor, perf, test, chore
+3. Keep it concise (max 100 characters)
+4. Focus on the main change
+5. No body or footer needed
+6. Return ONLY the commit message, nothing else`;
   }
 
   private formatResponse(response: string): string {
