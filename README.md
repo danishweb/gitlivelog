@@ -1,68 +1,86 @@
 # GitLiveLog 🚀
 
-Never let your GitHub activity graph look empty again! GitLiveLog automatically tracks and commits your coding activity in real-time, powered by AI for meaningful commit messages.
+> Tired of your GitHub activity graph making you look like you've been on a year-long sabbatical? Let GitLiveLog save you from commit embarrassment! 
 
-## Features ✨ 
+GitLiveLog is your VS Code companion that automatically commits your code changes while you're in the flow. No more forgetting to commit - we've got you covered! 
 
-- **AI-Powered Commit Messages**: Generates meaningful commit messages using various AI models
-- **Multiple AI Providers**: Support for:
-  - Google Gemini
-  - OpenAI (GPT-3.5, GPT-4)
-  - DeepSeek
-  - More coming soon!
-- **Customizable Settings**: Configure commit frequency, AI providers, and more
-- **Smart Diffing**: Only commits meaningful changes
-- **Status Bar Integration**: See your tracking status at a glance
+![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/danishweb.gitlivelog)
+![VS Code Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/danishweb.gitlivelog)
+![VS Code Marketplace Rating](https://img.shields.io/visual-studio-marketplace/r/danishweb.gitlivelog)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
-## Requirements 📋
+<p align="center">
+  <img src="resources/icon.svg" width="150" />
+</p>
 
-- VS Code 1.85.0 or higher
-- Git installed and configured
-- API key for your chosen AI provider
+## Features ✨
 
-## Installation 🔧
+- **🤖 Auto-Commit**: Automatically commits your changes while you code
+- **🧠 AI-Powered**: Generates meaningful commit messages using AI
+- **⚡ Zero Config**: Works out of the box with smart defaults
+- **🎯 Focus Mode**: No more context switching to make commits
+- **📊 Better History**: Granular commit history shows your actual progress
+- **🎨 Flexible**: Customize commit frequency and AI models to your liking
 
-1. Install the extension from VS Code Marketplace
-2. Configure your preferred AI provider in settings
-3. Start coding! GitLiveLog will handle the rest
+## Quick Start 🎬
+
+1. Install GitLiveLog from VS Code Marketplace
+2. Open your project
+3. Start coding! GitLiveLog will handle the commits
 
 ## Configuration ⚙️
 
-Access settings through VS Code's settings UI or settings.json:
+Access settings through VS Code's settings menu:
 
 ```json
 {
-  "gitlivelog.isTracking": true,
-  "gitlivelog.commitFrequency": 5,
-  "gitlivelog.ai.enabled": true,
-  "gitlivelog.ai.model": "gemini-pro",
-  "gitlivelog.ai.apiKey": "your-api-key-here"
+  "gitlivelog.isTracking": true,        // Enable/disable auto-tracking
+  "gitlivelog.commitFrequency": 5,      // Minutes between commits
+  "gitlivelog.ai.enabled": true,        // Enable AI commit messages
+  "gitlivelog.ai.model": "gemini-pro",  // Choose AI model
+  "gitlivelog.ai.apiKey": ""            // Your AI service API key
 }
 ```
 
-## AI Models 🤖
+## Supported AI Models 🤖
 
-Currently supported models:
-- gemini-pro (Google)
-- gpt-3.5-turbo (OpenAI)
-- gpt-4 (OpenAI)
-- deepseek-chat (DeepSeek)
+- Gemini Pro (Default)
+- GPT-3.5 Turbo
+- GPT-4
+- DeepSeek Chat
 
-## Commands 🎮
+## Why GitLiveLog? 🤔
 
-- `GitLiveLog: Show Menu`: Open the GitLiveLog command menu
-- `GitLiveLog: Start Tracking`: Start tracking your coding activity
-- `GitLiveLog: Stop Tracking`: Stop tracking
-- `GitLiveLog: Configure Settings`: Open settings
+- **Never Forget to Commit**: Auto-commits while you code
+- **Stay in the Zone**: No more interruptions to write commit messages
+- **Smart History**: AI generates meaningful commit messages
+- **Real Progress**: Your GitHub activity finally reflects your true effort
+
+## For More Details 📚
+
+Check out our [detailed documentation](docs/README.md) for:
+- Advanced configuration
+- Best practices
+- Pro tips
+- Troubleshooting
 
 ## Contributing 🤝
 
-Contributions are welcome! Please check our [contribution guidelines](CONTRIBUTING.md).
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes:
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License 📄
 
-MIT License - see [LICENSE](LICENSE) for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Support 💬
+---
 
-Having issues or suggestions? Please [open an issue](https://github.com/Codeium-team/gitlivelog/issues).
+<p align="center">
+Made with ❤️ by developers who kept forgetting to commit<br>
+<a href="https://github.com/danishweb/gitlivelog/issues">Report Bug</a> · <a href="https://github.com/danishweb/gitlivelog/issues">Request Feature</a>
+</p>
