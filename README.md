@@ -1,72 +1,68 @@
-# GitLiveLog - Real-Time Coding Activity Tracker
+# GitLiveLog 🚀
 
-GitLiveLog is a VS Code extension that provides accurate, privacy-focused tracking of your coding activity. Instead of relying on GitHub's public activity metrics, GitLiveLog tracks your actual coding effort locally, giving you meaningful insights into your development patterns.
+Never let your GitHub activity graph look empty again! GitLiveLog automatically tracks and commits your coding activity in real-time, powered by AI for meaningful commit messages.
 
-## Features
+## Features ✨ 
 
-- **Automated Activity Tracking**: Tracks your coding activity in real-time
-- **Privacy First**: All data stays local by default
-- **Detailed Analytics**: View breakdowns by file type, time spent, and more
-- **Function-Level Tracking**: Track changes at the function level
-- **Optional AI Summaries**: Get AI-powered summaries of your work (optional)
+- **AI-Powered Commit Messages**: Generates meaningful commit messages using various AI models
+- **Multiple AI Providers**: Support for:
+  - Google Gemini
+  - OpenAI (GPT-3.5, GPT-4)
+  - DeepSeek
+  - More coming soon!
+- **Customizable Settings**: Configure commit frequency, AI providers, and more
+- **Smart Diffing**: Only commits meaningful changes
+- **Status Bar Integration**: See your tracking status at a glance
 
-## Quick Start Guide
+## Requirements 📋
 
-1. **Installation**
-   - Install the extension from VS Code Marketplace
-   - The welcome screen will appear automatically on first launch
-   
-2. **Initial Setup**
-   - Choose where to store your activity logs
-   - Configure privacy settings
-   - Set your preferred tracking interval
-   
-3. **Using GitLiveLog**
-   - Activity tracking starts automatically after setup
-   - View your activity through the GitLiveLog panel
-   - Access settings anytime through VS Code settings
-   
-4. **Customization**
-   You can customize GitLiveLog through VS Code settings:
-   - `gitlivelog.logLocation`: Where activity logs are stored
-   - `gitlivelog.trackFileTypes`: Enable/disable file type tracking
-   - `gitlivelog.trackFunctions`: Enable/disable function-level tracking
-   - `gitlivelog.aiSummaries`: Enable/disable AI-powered summaries
-   - `gitlivelog.interval`: Set activity logging interval
+- VS Code 1.85.0 or higher
+- Git installed and configured
+- API key for your chosen AI provider
 
-## Privacy
+## Installation 🔧
 
-GitLiveLog is designed with privacy in mind:
-- All data stays on your machine
-- No telemetry collection
-- Open source for transparency
-- Configurable tracking granularity
+1. Install the extension from VS Code Marketplace
+2. Configure your preferred AI provider in settings
+3. Start coding! GitLiveLog will handle the rest
 
-## Support
+## Configuration ⚙️
 
-Found a bug or have a feature request? Please open an issue on our [GitHub repository](https://github.com/yourusername/gitlivelog).
+Access settings through VS Code's settings UI or settings.json:
 
-## License
+```json
+{
+  "gitlivelog.isTracking": true,
+  "gitlivelog.commitFrequency": 5,
+  "gitlivelog.ai.enabled": true,
+  "gitlivelog.ai.model": "gemini-pro",
+  "gitlivelog.ai.apiKey": "your-api-key-here"
+}
+```
 
-This extension is licensed under the MIT License. See the LICENSE file for details.
+## AI Models 🤖
 
-## Following extension guidelines
+Currently supported models:
+- gemini-pro (Google)
+- gpt-3.5-turbo (OpenAI)
+- gpt-4 (OpenAI)
+- deepseek-chat (DeepSeek)
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+## Commands 🎮
 
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+- `GitLiveLog: Show Menu`: Open the GitLiveLog command menu
+- `GitLiveLog: Start Tracking`: Start tracking your coding activity
+- `GitLiveLog: Stop Tracking`: Stop tracking
+- `GitLiveLog: Configure Settings`: Open settings
 
-## Working with Markdown
+## Contributing 🤝
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
+Contributions are welcome! Please check our [contribution guidelines](CONTRIBUTING.md).
 
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+## License 📄
 
-## For more information
+MIT License - see [LICENSE](LICENSE) for details.
 
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+## Support 💬
 
-**Enjoy!**
+Having issues or suggestions? Please [open an issue](https://github.com/Codeium-team/gitlivelog/issues).
