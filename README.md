@@ -10,7 +10,7 @@ GitLiveLog is your VS Code companion that automatically commits your code change
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
 <p align="center">
-  <img src="resources/icon.svg" width="150" />
+  <img src="resources/icon.png" width="150" />
 </p>
 
 ## Features ✨
