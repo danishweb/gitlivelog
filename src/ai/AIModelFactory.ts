@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { IAIService } from './interfaces/IAIService';
 import { AVAILABLE_MODELS, AIModelConfig } from './interfaces/AIModels';
-import { OpenAIService } from './providers/OpenAIService';
+import { OpenAICompatibleService } from './providers/OpenAICompatibleService';
 import { GeminiService } from './providers/GeminiService';
 
 export class AIModelFactory {
@@ -23,6 +23,8 @@ export class AIModelFactory {
         const modelName = config.get<string>('model', 'gemini-pro');
         const apiKey = config.get<string>('apiKey', '');
 
+        console.log(`AI Model: ${modelName}`);
+
         // If model hasn't changed and we have an instance, return it
         if (this.currentModel && this.lastModelName === modelName) {
             return this.currentModel;
@@ -31,6 +33,10 @@ export class AIModelFactory {
         const modelConfig = AVAILABLE_MODELS[modelName];
         if (!modelConfig) {
             throw new Error(`Unknown model: ${modelName}`);
+        } 
+
+        if (modelConfig.baseURL) {
+            console.log(`Cus API endpoint: ${modelConfig.baseURL}`);
         }
 
         // Update model config with API key
@@ -49,7 +55,8 @@ export class AIModelFactory {
             case 'gemini':
                 return new GeminiService(config);
             case 'openai':
-                return new OpenAIService(config);
+            case 'openai-compatible':
+                return new OpenAICompatibleService(config);
             default:
                 throw new Error(`Unsupported provider: ${config.provider}`);
         }

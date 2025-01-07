@@ -195,7 +195,6 @@ export class AutoCommit {
       // Push changes after commit
       try {
         await this.gitService.push();
-        console.log("GitLiveLog: Successfully pushed changes");
       } catch (error) {
         console.error("GitLiveLog: Failed to push changes:", error);
         vscode.window.showWarningMessage(
@@ -205,8 +204,6 @@ export class AutoCommit {
 
       this.lastCommit = new Date();
       this.statusBar.updateStatus(true, this.lastCommit);
-
-      console.log("GitLiveLog: Successfully committed changes");
     } catch (error) {
       console.error("Failed to commit changes:", error);
       throw error;
