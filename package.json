@@ -2,7 +2,7 @@
   "name": "gitlivelog",
   "displayName": "GitLiveLog",
   "description": "Tired of your GitHub activity graph making you look like you've been on a year-long sabbatical? Let GitLiveLog save you from commit embarrassment! 🚀 This VS Code extension commits every actual keystroke of effort.",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "publisher": "danishweb",
   "private": false,
   "license": "MIT",
