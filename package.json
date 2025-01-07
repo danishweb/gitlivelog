@@ -43,7 +43,22 @@
         "gitlivelog.ai.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Enable AI-powered commit messages (requires Google Gemini API key)"
+          "description": "Enable AI-powered commit messages"
+        },
+        "gitlivelog.ai.model": {
+          "type": "string",
+          "enum": [
+            "gemini-pro",
+            "gpt-3.5-turbo",
+            "gpt-4"
+          ],
+          "default": "gemini-pro",
+          "description": "Select which AI model to use for generating commit messages"
+        },
+        "gitlivelog.ai.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for the selected AI model"
         },
         "gitlivelog.ai.maxDiffSize": {
           "type": "number",
@@ -51,11 +66,6 @@
           "minimum": 1000,
           "maximum": 10000,
           "description": "Maximum size of code changes to send to AI for commit message generation (in characters)"
-        },
-        "gitlivelog.ai.geminiApiKey": {
-          "type": "string",
-          "default": "",
-          "description": "Google Gemini API key for generating commit messages. Get one at https://makersuite.google.com/app/apikey"
         }
       }
     }
@@ -89,6 +99,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.1.3",
-    "axios": "^1.7.9"
+    "axios": "^1.7.9",
+    "openai": "^4.77.3"
   }
 }

@@ -1,7 +1,9 @@
 import * as vscode from "vscode";
 import { GeminiService } from "../ai/GeminiService";
+import { AIModelFactory } from "../ai/AIModelFactory";
 import { StatusBar } from "../ui/StatusBar";
 import { GitService } from "../utils/git";
+import { IAIService } from "../ai/interfaces/IAIService";
 
 interface ActivityState {
   lastActivityTime: Date;
@@ -16,7 +18,7 @@ export class AutoCommit {
   private lastCommit: Date = new Date();
   private gitService: GitService;
   private statusBar: StatusBar;
-  private aiService: GeminiService;
+  private aiService: IAIService;
   private activityState: ActivityState = {
     lastActivityTime: new Date(),
     changeCount: 0,
@@ -33,7 +35,7 @@ export class AutoCommit {
   private constructor() {
     this.gitService = GitService.getInstance();
     this.statusBar = StatusBar.getInstance();
-    this.aiService = GeminiService.getInstance();
+    this.aiService = AIModelFactory.getInstance().getCurrentModel();
     this.setupActivityListeners();
   }
 
